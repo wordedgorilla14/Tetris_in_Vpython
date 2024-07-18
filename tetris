@@ -1,0 +1,554 @@
+Web VPython 3.2
+import random
+
+# camera
+scene.autoscale = False
+scene.userpan = False        
+scene.userzoom = False
+scene.userspin = False
+scene.camera.pos = vec(0,0,50) # scene.camera.pos = vec(0,0,2), scene.forward = vec(0,0,-1)
+scene.forward = vec(0,0,1)
+
+#scene.camera.pos = vec(0,0,20)
+#scene.forward = vec(0,0,-1)
+
+# start screen
+StartText = text(text='TeTris', pos=vec(0,-0.4, 20), color=color.white, align = 'center', axis = vec(-1,0,0), emissive=True, font = 'serif')
+StartSubText = text(text='Press \'G\' to start', pos=vec(0,-1, 20), color=color.white, align = 'center', axis = vec(-1,0,0), emissive=True, opacity=0.8, font = 'serif')
+StartSubText.length = 3
+StartSubText.height = 0.3
+
+# design
+ground = box(pos = vec(0.5,-10,0), length = 12, font = 'serif')
+wall_L = box(pos = vec(-5,0,0), length = 1, height = 20, font = 'serif')
+wall_L_ed = wall_L.pos.x + wall_L.length/2
+wall_R = box(pos = vec(6,0,0), length = 1, height = 20, font = 'serif')
+wall_R_ed = wall_R.pos.x - wall_R.length/2
+scoreText = text(text='LINES', pos=vec(-12,7, 0), color=color.green, font = 'serif')
+a = 0
+
+# test fuctions
+# line
+#temp1 = 0
+#while temp1 > -20 : 
+#    tl = box(pos = vec(0,10 + temp1,0), height = 0.05, length = 13, width = 0.05, color= color.red)
+#    tw = box(pos = vec(-4 - temp1,0,0), length = 0.05, height = 20, width = 0.05, color = color.green)
+#    temp1 -=1
+
+# defalut variable
+S_Mino = []
+SetMinoSize = vec(0.98,0.98,0.98)
+setDelay = 10 # default : 10 Falling speed
+
+s = group(pos = vec(0,10,0))
+p = group()
+
+RDBlockN = [0,1,2,3,4,5,6]
+
+class VoidMino:
+    def __init__(self) :
+        self.check = 0
+        
+G = [ [VoidMino() for j in range(10)] for i in range(23)] # 23*10 # in game :20*10
+
+class Mino:
+    def __init__(self, name:"",shape:[], color) : # Mino("Name", [vec(),vec(),vec(),vec()], color)
+        self.name = name
+        self.shape = shape
+        self.color = color
+        self.check = 1
+        
+class Game:
+    def __init__(self) :
+        self._mino_list = [Mino("S",[vec(0,0,0),vec(0,1,0), vec(1,1,0), vec(-1,0,0)], color.green)]
+        self._mino_list.append(Mino("Z", [vec(0,0,0),vec(0,1,0),vec(-1,1,0),vec(1,0,0)], color.red))
+        self._mino_list.append(Mino("O", [vec(0,0,0),vec(0,1,0),vec(-1,0,0),vec(-1,1,0)], color.yellow))
+        self._mino_list.append(Mino("I", [vec(0,0,0),vec(-1,0,0),vec(1,0,0),vec(-2,0,0)], color.cyan))
+        self._mino_list.append(Mino("L", [vec(0,0,0),vec(-1,0,0),vec(1,0,0),vec(1,1,0)], color.orange))
+        self._mino_list.append(Mino("J", [vec(0,0,0),vec(-1,0,0),vec(1,0,0),vec(-1,1,0)], color.purple))
+        self._mino_list.append(Mino("T", [vec(0,0,0),vec(-1,0,0),vec(1,0,0),vec(0,1,0)], color.magenta))
+        
+        i = 0
+        while(i<23) :
+            G[i] = [VoidMino() for j in range(10)]
+            i += 1
+        
+        self.fin = False 
+        #self.fin = True ## test 
+        
+        self.RDBlockN = [0,1,2,3,4,5,6]
+        self.RDN = 0
+        self.score = 0
+        self.scoreN = text(text=0, pos=vec(-10.7,5,0), color=color.green, font = 'serif')
+        
+        self.roTimes = 0
+    
+    def _init(self):
+        self.roTimes = 0
+        
+        if(self.RDN == 7): # set bag
+            t=0
+            while(t<7) :
+                self.RDBlockN.append(t)
+                t+=1
+            self.RDN = 0
+        RD = random.choice(self.RDBlockN)
+        self.RDBlockN.remove(RD)
+        # print(self.RDN, self.RDBlockN)
+        self.RDN += 1
+        
+        self._present_mino = self._mino_list[RD]
+        
+        #self._present_mino = self._mino_list[3] ######### For test #########
+        
+        # print("RD=",RD,"self._mino_list[RD].name=", self._mino_list[RD].name) # log print
+        s.pos=vec(0,11,0)
+
+        self._summon()
+        self._event()
+    
+    def _summon(self):
+        t = 0
+        while t <= 3: # 3  
+            S_Mino[t] = box(pos = self._present_mino.shape[t], size = SetMinoSize, color = self._present_mino.color, group = s, origin = vec(0,0,0), check = 1)
+            # print(t, self._present_mino.name) #log
+            t += 1
+            
+    def _del(self, line): # delete
+        rate(10)
+        t = 0
+        while t<= 9 :
+            G[line][t].visible = False # delete from GPU
+            t=t+1
+        rate(10)
+        t = 0
+        while t<= 9 :
+            G[line][t].visible = True # delete from GPU
+            t=t+1
+        rate(10)
+        t = 0
+        while t<= 9 :
+            G[line][t].visible = False # delete from GPU
+            t=t+1
+        rate(10)
+        t = 0
+        while t<= 9 :
+            G[line][t].visible = True # delete from GPU
+            t=t+1
+        rate(10)
+        t = 0
+        while t<= 9 :
+            G[line][t].visible = False # delete from GPU
+            t=t+1
+        rate(200)
+        G[line] = [VoidMino() for j in range(10)]
+    
+    def _Lcheck(self) : # left wall
+        t = 0
+        while t <=3: 
+            if((s.pos.x + S_Mino[t].pos.x) + 4 <= 0) :
+                return False
+            elif(G[(s.pos.y + S_Mino[t].pos.y + 9)][(s.pos.x + S_Mino[t].pos.x+4) - 1].check != 0):
+                return False
+            else :
+                t = t+1
+                continue
+        return True
+        
+    def _Rcheck(self) : # if right wall exists -> False return
+        t = 0
+        while t <=3: 
+            if((s.pos.x + S_Mino[t].pos.x) + 4 > 8) :
+                return False
+            elif(G[(s.pos.y + S_Mino[t].pos.y + 9)][(s.pos.x + S_Mino[t].pos.x+4) + 1].check != 0):
+                return False
+            else :
+                t = t+1
+                continue
+        return True
+    def _upMIno(self):
+        t = 0
+        while t<=3 : 
+            if((G[(s.pos.y + S_Mino[t].pos.y + 9) + 1][(s.pos.x + S_Mino[t].pos.x+4)]).check != 0 ):
+                return False
+            else :
+                t = t+1
+                continue
+        return True
+        
+        
+    def _underMino(self) :
+        t = 0
+        while t<=3 : 
+            if((G[(s.pos.y + S_Mino[t].pos.y + 9) - 1][(s.pos.x + S_Mino[t].pos.x+4)]).check != 0 ):
+                return False
+            else :
+                t = t+1
+                continue
+        t = 0
+        while t<=3 : 
+            if(S_Mino[t].pos.y + s.pos.y == -9):
+                return False
+            else :
+                t = t+1
+                continue
+        return True
+    
+    def _inspection(self) :
+        small = [S_Mino[0].pos.y, S_Mino[1].pos.y,S_Mino[2].pos.y,S_Mino[3].pos.y]
+        minpos = min(small)
+        
+        t = minpos + 9
+        m = minpos + 9
+        while t < 22:
+            i=0
+            sum = 0
+            while (i <= 9):
+                sum += G[t][i].check
+                i += 1
+            #print(sum)
+            if sum == 10 :
+                self._del(t) # delete from memory
+                
+                while m<=21 : # reorder
+                    i=0
+                    while (i <= 9) :
+                        if(G[m+1][i].check != 0) :
+                            G[m+1][i].pos.y -= 1
+                        i += 1
+                    G[m] = G[m+1]
+                    m += 1
+                
+                # score reroading
+                self.score += 1
+                self.scoreN.visible = False
+                del self.scoreN
+                self.scoreN = text(text=self.score, pos=vec(-10.7,5,0), color=color.green, font = 'serif')
+                
+                t -= 1
+                minpos -= 1
+                m = minpos + 9
+                
+            t += 1
+            
+        return
+    
+    def _rotateR(self, object): 
+        if (object == 'S') : #0
+                if self.roTimes == 1 :
+                    if(self._underMino()):
+                        S_Mino[3].pos.x += 2 
+                        S_Mino[2].pos.y -= 2 
+                    else : self.roTimes -= 1
+                if self.roTimes == 2 :
+                    if(self._Lcheck()):
+                        S_Mino[2].pos.x -= 2 
+                        S_Mino[1].pos.y -= 2 
+                    else : self.roTimes -= 1
+                if self.roTimes == 3:
+                    if(self._upMIno()):
+                        S_Mino[3].pos.x -= 2 
+                        S_Mino[2].pos.y += 2 
+                    else : self.roTimes -= 1
+                if self.roTimes == 4 :
+                    if(self._Rcheck()):
+                        S_Mino[2].pos.x += 2 
+                        S_Mino[1].pos.y += 2 
+                        self.roTimes = 0
+                    else : self.roTimes -= 1
+                    
+        elif (object == 'Z') : #1
+                if self.roTimes == 1 :
+                    if(self._underMino()):
+                        S_Mino[2].pos.x += 2 
+                        S_Mino[1].pos.y -= 2 
+                    else : self.roTimes -= 1
+                if self.roTimes == 2 :
+                    if(self._Lcheck()):
+                        S_Mino[3].pos.x -= 2 
+                        S_Mino[2].pos.y -= 2 
+                    else : self.roTimes -= 1
+                if self.roTimes == 3:
+                    if(self._upMIno()):
+                        S_Mino[2].pos.x -= 2 
+                        S_Mino[1].pos.y += 2 
+                    else : self.roTimes -= 1
+                if self.roTimes == 4 :
+                    if(self._Rcheck()):
+                        S_Mino[3].pos.x += 2 
+                        S_Mino[2].pos.y += 2 
+                        self.roTimes = 0
+                    else : self.roTimes -= 1
+        
+        elif (object == 'I') : #3
+                if self.roTimes == 1 :
+                    if(self._underMino()):
+                        S_Mino[0].pos.y -= 1 
+                        S_Mino[1].pos.x += 1 
+                        S_Mino[2].pos.x -= 1 
+                        S_Mino[2].pos.y -= 2
+                        S_Mino[3].pos.x += 2
+                        S_Mino[3].pos.y += 1
+                    else : self.roTimes -= 1
+                if self.roTimes == 2 :
+                    if(self._Lcheck()):
+                        S_Mino[0].pos.x -= 1 
+                        S_Mino[1].pos.y -= 1 
+                        S_Mino[2].pos.x -= 2 
+                        S_Mino[2].pos.y += 1
+                        S_Mino[3].pos.x += 1
+                        S_Mino[3].pos.y -= 2
+                    else : self.roTimes -= 1
+                if self.roTimes == 3:
+                    if(self._upMIno()):
+                        S_Mino[0].pos.y += 1  
+                        S_Mino[1].pos.x -= 1 
+                        S_Mino[2].pos.x += 1 
+                        S_Mino[2].pos.y += 2
+                        S_Mino[3].pos.x -= 2
+                        S_Mino[3].pos.y -= 1
+                    else : self.roTimes -= 1
+                if self.roTimes == 4 :
+                    if(self._Rcheck()):
+                        S_Mino[0].pos.x += 1 
+                        S_Mino[1].pos.y += 1 
+                        S_Mino[2].pos.x += 2
+                        S_Mino[2].pos.y -= 1
+                        S_Mino[3].pos.x -= 1
+                        S_Mino[3].pos.y += 2
+                        self.roTimes = 0
+                    else : self.roTimes -= 1
+            
+        elif (object == 'L') : #4
+                if self.roTimes == 1 :
+                    if(self._underMino()):
+                        S_Mino[2].pos.x -= 1 
+                        S_Mino[2].pos.y -= 1 
+                        S_Mino[1].pos.x += 1 
+                        S_Mino[1].pos.y += 1
+                        S_Mino[3].pos.y -= 2
+                    else : self.roTimes -= 1
+                if self.roTimes == 2 :
+                    if(self._Lcheck()):
+                        S_Mino[2].pos.x -= 1 
+                        S_Mino[2].pos.y += 1 
+                        S_Mino[1].pos.x += 1 
+                        S_Mino[1].pos.y -= 1
+                        S_Mino[3].pos.x -= 2
+                    else : self.roTimes -= 1
+                if self.roTimes == 3:
+                    if(self._upMIno()):
+                        S_Mino[2].pos.x += 1 
+                        S_Mino[2].pos.y += 1 
+                        S_Mino[1].pos.x -= 1 
+                        S_Mino[1].pos.y -= 1
+                        S_Mino[3].pos.y += 2
+                    else : self.roTimes -= 1
+                if self.roTimes == 4 :
+                    if(self._Rcheck()):
+                        S_Mino[2].pos.x += 1 
+                        S_Mino[2].pos.y -= 1 
+                        S_Mino[1].pos.x -= 1 
+                        S_Mino[1].pos.y += 1
+                        S_Mino[3].pos.x += 2
+                        self.roTimes = 0
+                    else : self.roTimes -= 1
+                    
+        elif (object == 'J') : #5
+                if self.roTimes == 1 :
+                    if(self._underMino()):
+                        S_Mino[2].pos.x -= 1 
+                        S_Mino[2].pos.y -= 1 
+                        S_Mino[1].pos.x += 1 
+                        S_Mino[1].pos.y += 1
+                        S_Mino[3].pos.x += 2
+                    else : self.roTimes -= 1
+                if self.roTimes == 2 :
+                    if(self._Lcheck()):
+                        S_Mino[2].pos.x -= 1 
+                        S_Mino[2].pos.y += 1 
+                        S_Mino[1].pos.x += 1 
+                        S_Mino[1].pos.y -= 1
+                        S_Mino[3].pos.y -= 2
+                    else : self.roTimes -= 1
+                if self.roTimes == 3:
+                    if(self._upMIno()):
+                        S_Mino[2].pos.x += 1 
+                        S_Mino[2].pos.y += 1 
+                        S_Mino[1].pos.x -= 1 
+                        S_Mino[1].pos.y -= 1
+                        S_Mino[3].pos.x -= 2
+                    else : self.roTimes -= 1
+                if self.roTimes == 4 :
+                    if(self._Rcheck()):
+                        S_Mino[2].pos.x += 1 
+                        S_Mino[2].pos.y -= 1 
+                        S_Mino[1].pos.x -= 1 
+                        S_Mino[1].pos.y += 1
+                        S_Mino[3].pos.y += 2
+                        self.roTimes = 0
+                    else : self.roTimes -= 1
+                
+        elif (object == 'T') : #6
+                if self.roTimes == 1 :
+                    if(self._underMino()):
+                        S_Mino[2].pos.x -= 1 
+                        S_Mino[2].pos.y -= 1 
+                        S_Mino[1].pos.x += 1 
+                        S_Mino[1].pos.y += 1
+                        S_Mino[3].pos.x += 1
+                        S_Mino[3].pos.y -= 1
+                    else : self.roTimes -= 1
+                if self.roTimes == 2 :
+                    if(self._Lcheck()):
+                        S_Mino[2].pos.x -= 1 
+                        S_Mino[2].pos.y += 1 
+                        S_Mino[1].pos.x += 1 
+                        S_Mino[1].pos.y -= 1
+                        S_Mino[3].pos.x -= 1
+                        S_Mino[3].pos.y -= 1
+                    else : self.roTimes -= 1
+                if self.roTimes == 3:
+                    if(self._upMIno()):
+                        S_Mino[2].pos.x += 1 
+                        S_Mino[2].pos.y += 1 
+                        S_Mino[1].pos.x -= 1 
+                        S_Mino[1].pos.y -= 1
+                        S_Mino[3].pos.x -= 1
+                        S_Mino[3].pos.y += 1
+                    else : self.roTimes -= 1
+                if self.roTimes == 4 :
+                    if(self._Rcheck()):
+                        S_Mino[2].pos.x += 1 
+                        S_Mino[2].pos.y -= 1 
+                        S_Mino[1].pos.x -= 1 
+                        S_Mino[1].pos.y += 1
+                        S_Mino[3].pos.x += 1
+                        S_Mino[3].pos.y += 1
+                        self.roTimes = 0
+                    else : self.roTimes -= 1
+    
+    def _event(self):
+        delay = 0
+        Ctime = 0 #  check the object moving
+        while(True):
+            rate(10)
+            if ('left' in keysdown()) :
+                if (self._Lcheck() == True) :
+                    s.pos.x -= 1 
+            elif ('right' in keysdown()):
+                if (self._Rcheck() == True) :
+                    s.pos.x += 1
+                    
+            if('down' in keysdown()):
+                if(self._underMino() == True and s.pos.y > -9):
+                    s.pos.y -= 1  
+                    delay = 0
+                else : 
+                    Ctime += 1
+            elif delay >= setDelay:
+                if(self._underMino() == True and s.pos.y > -9):
+                    s.pos.y -= 1
+                    delay = 0
+                else :
+                    Ctime += 1 
+            
+            if (keysdown() == 'x') :
+                self.roTimes += 1
+                self._rotateR(self._present_mino.name)
+                    
+            if (Ctime >= setDelay) :
+                t = 0
+                Ctime = 0
+                while t <= 3: 
+                    S_Mino[t].group=p
+                    S_Mino[t].pos = s.pos + S_Mino[t].pos
+                    G[S_Mino[t].pos.y+9][S_Mino[t].pos.x+4] = S_Mino[t]
+                    
+                    if S_Mino[t].pos.y + 9 >= 20 :
+                        i = 0
+                        while(i < 23):
+                            j = 0
+                            while (j < 10) :
+                                #print(G[i][j].check)
+                                if (G[i][j].check != 0):
+                                    G[i][j].visible = False
+                                j += 1
+                            i += 1
+                            
+                        self._gameover()
+                        break
+                        
+                    t += 1
+                self._inspection()
+                break
+            
+            delay += 1 # delay
+            
+        self.execute()      
+        
+    def execute(self):
+        if self.fin == False :
+            self._init()
+            
+        elif self.fin == True:
+            scene.camera.pos = vec(0,0,50) # scene.camera.pos = vec(0,0,2), scene.forward = vec(0,0,-1)
+            scene.forward = vec(0,0,1)
+            StartText1 = text(text='Game Over', pos=vec(0,-0.4, 20), color=color.red, align = 'center', axis = vec(-1,0,0), emissive=True, opacity=0.9, font = 'serif')
+            StartText2 = text(text='Press \'R\' to Restart', pos=vec(0,-1, 20), color=color.white, align = 'center', axis = vec(-1,0,0), emissive=True, opacity=0.8, font = 'serif')
+            StartText1.length = 5
+            StartText2.length = 3
+            StartText1.height = 1
+            StartText2.height = 0.3
+            
+            StartText1.visible = True
+            StartText2.visible = True
+            
+            self.scoreN.visible = False
+            del self.scoreN
+            
+            while (True) :  
+                rate(100)
+                if ('r' in keysdown()) :
+                    StartText1.visible = False
+                    del StartText1
+                    StartText2.visible = False
+                    del StartText2
+                    scene.camera.pos = vec(0,0,-10)
+                    scene.forward = vec(0,0,-5)
+                    break
+                continue
+            
+            start = Game()
+            start.execute()
+            
+    def _gameover(self):
+        self.fin = True
+
+def main():
+    start = Game()
+    start.execute()
+
+while (True) :  
+        rate(100)
+        if ('g' in keysdown()) :
+            StartText.visible = False
+            del StartText
+            StartSubText.visible = False
+            del StartSubText
+            
+            scene.camera.pos = vec(0,0,-10)
+            scene.forward = vec(0,0,-5)
+            break
+        continue
+
+print("move : \'arrow keys\'")
+print("rotate : \'x\'")
+
+main()
+
+#delete object
+"""
+object.visible = False # delete from GPU
+del object # delete from memory
+"""
